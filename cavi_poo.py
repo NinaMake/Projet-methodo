@@ -23,10 +23,6 @@ class CAVI:
         self.data = np.zeros((N))
 
         # paramètres variationnels
-        self.phi = np.zeros((N, nb_clusters))
-        for i in range(self.N):
-            self.phi[i, np.random.choice(nb_clusters)] = 1
-        # On met au hasard les individus dans un cluster
 
         self.ELBOS = [1, 2]
 
@@ -40,6 +36,12 @@ class CAVI:
             [abs(np.random.normal(0, sigma)) for k in range(self.nb_clusters)]
             )
 
+        self.phi = np.zeros((N, nb_clusters))
+        for i in range(self.N):
+            self.phi[i, np.random.choice(nb_clusters)] = 1
+        # On met au hasard les individus dans un cluster
+
+
         self.m_n = self.m_0
 
         self.s_n = self.s_0
@@ -49,7 +51,8 @@ class CAVI:
         # on génére les données en fonction du cluster dans lequel est chaque individu
 
         for i in range(self.N):
-            k = np.argmax(self.phi[i])
+            mult = np.random.multinomial(1, pi, size = 1)
+            k = np.argmax(mult)
             self.data[i] = np.random.normal(self.mu[k],
                                             1)
 
@@ -166,13 +169,13 @@ nb_clusters = 2  # Nombre de clusters
 pi = np.array([0.5, 0.5])  # Proportions des clusters
 N = 1000  # Nombre de points de données
 
-np.random.seed(1981)
+np.random.seed(124)
 
 cavi = CAVI(sigma, nb_clusters, pi, N)
 cavi.gmm_rand()
-cavi.init_kmeans()
 print(cavi.mu)
 print(cavi.m_0)
+print(np.sum(cavi.phi[:, 1]))
 
 cavi.coordinate_ascent(50)
 cavi.plot_results()
