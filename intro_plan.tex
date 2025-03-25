@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath, amssymb}
+\usepackage{stmaryrd}
+\usepackage{mathrsfs}
+
+\title{Projet méthodo}
+\author{N M}
+\date{February 2025}
+
+\begin{document}
+
+
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+ 
+
+Probabilistic inference in complex models often hinges on approximating intractable posterior distributions. While this challenge arises prominently in Bayesian statistics - the focus of this report - it is equally relevant in other contexts . 
+In the Bayesian framework, given the observed variables $X$ and latent variables $Z$, the posterior $p(z|x)$ is determined via the Bayes' theorem : 
+\begin{equation}
+    p(z|x) = \frac{\pi(z)\mathcal{L}(x|z)}{p(x)}
+\end{equation}
+
+where $p(z\mid x)$ is the posterior, $\pi(z)$ the prior $p(x|z)$ is the likelihood and $p(x)$ is the evidence. 
+The prior represents our beliefs about the distribution of the latent variables and the likelihood corresponds to the observed data. Therefore, the posterior is known up to a multiplicative constant, being the evidence, which can be written as : 
+\begin{equation}
+    p(x)= \int \pi(x)\mathcal{L}(x \mid z) dz
+\end{equation}
+It is often unavailable : either because there is no closed form for this integral, or because it would take exponential time to compute (for instance because the space of latent variables $Z$ is of high dimension). 
+
+In Bayesian Inference, traditional approaches aim at generating samples from the posterior distribution, when known up to a multiplicative constant. This includes Monte Carlo Markov Chains  (MCMC) methods. 
+\\
+\\
+Variational Inference(VI) offers a deterministic alternative by reformulating inference as an optimization problem. Specifically, VI minimizes the Kullback-Leibler(KL) divergence between a candidate distribution $q(z)$ from a predefined family of densities $\mathscr{D} $  and the target posterior : 
+\begin{equation}
+    q^*(z) =  \arg\min_ {q(z) \in \mathscr{D} } {\text{KL}(q(z)||p(z|x))}
+\end{equation}
+
+The choice of $\mathscr{D} $ depends on the model considered, and different choices may lead to different methods to solve this optimization problem. In this report, we will focus on the mean-field variational family but other assumptions can be made, following the context (see article : Automatic variation in Stan).
+
+VI's computational efficiency often surpasses MCMC (add ref). For instance, see the comparison with Gibbs Samplings in section 3 . Therefore, it is often used when we have a large amount of data.
+
+However,  VI lacks MCMC’s asymptotic guarantees, may converge to local optima, and is sensitive to initialization.
+\newline
+
+To put these concepts into practice,  we consider a Gaussian mixture model (GMM), detailed in Section 1,  where the evidence (ref to equation 2) is computationally prohibitive. 
+Notably, GMMs belong to the class of conditionally conjugate models, enabling generic VI methods like coordinate-ascent variational inference (CAVI).
+
+However, not all models are conditionally conjugate and conducting VI would then require alternative strategies, some of which are listed in ( section 5.2 of statistical review for statisticians). 
+\newline
+
+This report is organized as follows : 
+we start in section 1 by reformulating the optimization problem to make the evidence lower bound (ELBO) appear. This will allow us to highlight the similarities between the Expectation-Maximisation algorithm and variational inference.
+In section 2, we then present the theoretical foundations of VI when considering the mean variational family for $\mathscr{D}$ and derive the CAVI algorithm. We illustrate VI's performance through a practical implementation with the GMM model introduced. 
+
+\newpage
+
+\section{Reformulating the Optimization problem}
+\subsection{link with EM ? }
+
+\section{The theory}
+\subsection{mean-field variational family}
+\subsection{"solving" the optimization pb}
+\subsection{CAVI algorithm}
+
+\section{Example with GMM}
+\subsection{the model}
+\subsection{calculation}
+\subsection{implementation}
+
+
+
+
+\section{Annexes}
+\subsection{A little detour to EM}
+
+\end{document}
