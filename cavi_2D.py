@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm,  multivariate_normal
-import seaborn as sns
+
 
 from sklearn.cluster import KMeans
 
 class CAVI:
+
+    # Attention, sigma désigne la variance plutot que sigma^2, et pareil pour s_n.
     def __init__(self, sigma, d, nb_clusters, pi, N):
 
         # prior parameters
@@ -29,7 +31,7 @@ class CAVI:
 
         for i in range(self.N):
             self.phi[i, np.random.choice(nb_clusters)] = 1
-        # On met au hasard les individus dans un cluster
+        # On initialise au hasard les phi (au hasard un cluster)
 
 
         self.ELBOS = [1, 2]
@@ -38,17 +40,6 @@ class CAVI:
             [np.random.multivariate_normal(np.zeros(d), sigma*np.identity(d)
                                            ) for k in range(self.nb_clusters)]
             )
-
-        # Pour s_0, on suppose même variance pour toutes coordonnées
-        # faire une meilleure initialisation avec kmeans et variance par coordonnées
-
-        # on peut  faire une matrice (Kd, Kd), diagonale car covariance nulle entre dimension
-        # Rmq : sans doute plus simple de faire une matrice de taille (d, K)
-        # Avec s1....sK et sk1....skd
-        # Mais ce n'est plus une vraie matrice de variance covariance
-
-        # en fait on a la même variance et pas de covariance, donc pas besoin de matrices
-        # on indique juste l'écart type ?
 
         self.s_0 = np.array(
             [abs(np.random.normal(0, sigma)) for k in range(self.nb_clusters)]
@@ -182,10 +173,10 @@ class CAVI:
 
         # Afficher les données
         plt.figure(figsize=(8, 6))
-        plt.scatter(self.data[:, 0], self.data[:, 1], c='k', marker='o', alpha=0.4, label="Données")
+        plt.scatter(self.data[:, 0], self.data[:, 1], c='0.8', marker='o', alpha=0.3, label="Data")
 
         # Afficher les contours de la densité estimée
-        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), pdf, cmap="magma")
+        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), pdf, alpha = 0.5,colors ='r')
 
         # Vraie densité
         vraie_pdf = np.zeros(len(xy))
@@ -194,34 +185,79 @@ class CAVI:
 
         vraie_pdf = vraie_pdf.reshape(100, 100)
 
-        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), vraie_pdf, cmap='Greens')
+        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), vraie_pdf, colors='g', linestyles = 'dashed')
 
         # Moyennes estimées
-        plt.scatter(self.m_n[:, 0], self.m_n[:, 1], c='red', marker='x', s=100, label="Moyennes estimées")
+        plt.scatter(self.m_n[:, 0], self.m_n[:, 1], c='red', marker='x', s=100, label="Estimated means")
 
         plt.xlabel(r"$x_1$", fontsize=14)
         plt.ylabel(r"$x_2$", fontsize=14)
-        plt.title("Densités estimées par CAVI", fontsize=16)
+        plt.title("Densities estimated by CAVI", fontsize=16)
         plt.axis('equal')  # Forcer les axes à avoir la même échelle
         plt.legend()
         plt.show()
 
+    def plot_posterior_priore(self):
+        x_min, x_max = self.data[:, 0].min() - 1, self.data[:, 0].max() + 1
+        y_min, y_max = self.data[:, 1].min() - 1, self.data[:, 1].max() + 1
+        xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
+        xx, yy = xx.ravel(), yy.ravel()
+        xy = np.stack([xx, yy], axis=1)
+
+        # Calculer la posterior estimée par CAVI pour chaque point de la grille
+        pdf_posterior = np.zeros(len(xy))
+        for i in range(len(xy)):
+            for k in range(self.nb_clusters):
+                # Densité gaussienne pour le cluster k
+                cluster_density = multivariate_normal.pdf(xy[i], mean=self.m_n[k], cov= self.s_n[k]*np.eye(self.d))
+                pdf_posterior[i] += cluster_density
+
+        pdf_posterior = pdf_posterior.reshape(100, 100)
+
+        # Calcul de la prior
+        pdf_prior = np.zeros(len(xy))
+        for i in range(len(xy)):
+            for k in range(self.nb_clusters):
+                # Densité gaussienne pour le cluster k
+                cluster_density = multivariate_normal.pdf(xy[i], [0, 0], cov= self.sigma*np.eye(self.d))
+                pdf_prior[i] += cluster_density
+
+        pdf_prior = pdf_prior.reshape(100, 100)
+
+        # Affichage
+
+        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), pdf_posterior, cmap="magma")
+
+        plt.contour(xx.reshape(100, 100), yy.reshape(100, 100), pdf_prior, colors ='blue', linestyles= 'dashed')
+
+        plt.scatter(self.m_n[:, 0], self.m_n[:, 1], c='red', marker='x', s=100, label="Estimated means")
+
+        plt.xlabel(r"$x_1$", fontsize=14)
+        plt.ylabel(r"$x_2$", fontsize=14)
+        plt.title("Comparison of prior and posterior over mu", fontsize=16)
+        plt.axis('equal')  # Forcer les axes à avoir la même échelle
+        plt.legend()
+        plt.show()
+
+
+
 sigma = 10  # Écart-type commun
-nb_clusters = 2  # Nombre de clusters
-pi = np.array([0.5, 0.5])  # Proportions des clusters
+nb_clusters =  3 # Nombre de clusters
+pi = np.array([1/3, 1/3, 1/3])  # Proportions des clusters
 N = 1000  # Nombre de points de données
 
-np.random.seed(1981)
+np.random.seed(78)
+# 40000 close clusters
+
 cavi = CAVI(sigma, 2, nb_clusters, pi, N)
 
 cavi.gmm_rand()
-# cavi.init_kmeans()
-# revoir l'implémentation de kmeans pour 2D
 
 cavi.coordinate_ascent(50)
 print(cavi.m_n)
 print(cavi.mu)
 cavi.plot_results()
+cavi.plot_posterior_priore()
 
 plt.figure()
 elbo = cavi.ELBOS
@@ -229,5 +265,9 @@ del elbo[0:2]
 
 plt.plot (elbo)
 plt.ylabel('ELBO')
-plt.xlabel('itérations')
+plt.xlabel('iterations')
 plt.show()
+
+# On vérifie qu'on obtient aussi la distribution 1/K (ici 1/3)
+print(np.sum(cavi.phi[:,0]), np.sum(cavi.phi[:,1]), np.sum(cavi.phi[:,2]))
+print(cavi.mu, cavi.m_n)

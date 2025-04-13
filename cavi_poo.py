@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 from sklearn.cluster import KMeans
 import seaborn as sns
+import timeit
 
 # tester les graines suivantes : 124, 1981, 22051965, 31031965
 
@@ -75,7 +76,7 @@ class CAVI:
 
         # On initialise les paramètres variationnels avec ce qu'on a trouvé
         centroids = centroids.reshape((self.m_0.shape))
-        cavi.m_0 = centroids
+        self.m_0 = centroids
         K = len(centroids)
 
         for i in range(N):
@@ -126,6 +127,7 @@ class CAVI:
     def coordinate_ascent(self, nb_iter):
         iter = 0
         while iter < nb_iter and not self.has_converged():
+            iter += 1
             for k in range(self.nb_clusters):
                 denom = 1/(self.sigma) + np.sum(self.phi[:, k])
                 self.m_n[k] = np.dot(self.phi[:, k], self.data)/denom
@@ -143,33 +145,82 @@ class CAVI:
             ELBO = self.calc_elbo()
             self.ELBOS.append(ELBO)
 
-            iter += 1
+
 
             print(f"Iteration: {iter}")
             print(f"m_n: {self.m_n}")
             print(f"s_n: {self.s_n}")
             print(self.ELBOS[iter])
 
-    def plot_results(self):
-        fig, ax = plt.subplots(1, 1)
-        xx = np.linspace(-20, 20, 1000)
-        ax.plot(xx, self.gmm_pdf(xx))
-        # Histogramme des données
-        a = self.data
-        ax.hist(a, density=True, bins=30)
+    # def plot_results(self):
+    #     fig, ax = plt.subplots(1, 1)
+    #     xx = np.linspace(-20, 20, 1000)
+    #     ax.plot(xx, self.gmm_pdf(xx))
+    #     # Histogramme des données
+    #     a = self.data
+    #     ax.hist(a, density=True, bins=30)
 
+    #     for k in range(self.nb_clusters):
+    #         vals = np.random.normal(self.m_n[k], 1, size=1000)
+    #         sns.kdeplot(vals,  color='k', ax=ax)
+    #     plt.show()
+
+    def plot_results(self):
+        sns.set(style="whitegrid")
+        plt.figure(figsize=(10, 6))
+
+        # Histogramme des données
+        sns.histplot(self.data, bins=30, kde=False, stat="density", color="skyblue", alpha=0.5, label="Données")
+
+        # Courbe de la densité GMM (sans pondération pour être comparable au KDE)
+        xx = np.linspace(min(self.data)-3, max(self.data)+3, 1000)
+        plt.plot(xx, self.gmm_pdf(xx), label="GMM générative", color='black', linestyle='--', linewidth=2)
+
+        # Courbes KDE des distributions a posteriori de chaque cluster
         for k in range(self.nb_clusters):
-            vals = np.random.normal(self.m_n[k], 1, size=1000)
-            sns.kdeplot(vals,  color='k', ax=ax)
+            samples = np.random.normal(self.m_n[k], 1, size=1000)
+            sns.kdeplot(samples, label=f"Post. Cluster {k+1}", linewidth=2)
+
+        plt.title("Estimation de la densité par CAVI", fontsize=16)
+        plt.xlabel("Valeur", fontsize=14)
+        plt.ylabel("Densité", fontsize=14)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_posteriore_priore(self):
+        plt.figure(figsize=(10, 6))
+        xx = np.linspace(-10, 10, 1000)
+
+        # Prior : somme de normales centrées en 0 avec variance sigma
+        prior_density = np.zeros_like(xx)
+        for k in range(self.nb_clusters):
+            prior_density += norm.pdf(xx, loc=0, scale=self.sigma)
+
+        # Posterior : somme de normales centrées sur m_n avec s_n
+        posterior_density = np.zeros_like(xx)
+        for k in range(self.nb_clusters):
+            posterior_density += norm.pdf(xx, loc=self.m_n[k], scale=self.s_n[k])
+
+        plt.plot(xx, prior_density, label="Prior", linestyle='--', color='blue')
+        plt.plot(xx, posterior_density, label="Posterior", linestyle='-', color='red')
+
+        plt.title(" Prior comparison with Posterior", fontsize=16)
+        plt.xlabel(r"$\mu$", fontsize=14)
+        plt.ylabel("Densité", fontsize=14)
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
         plt.show()
 
 
-sigma = 10  # écart_type priore
+
+sigma = 10 # écart_type priore
 nb_clusters = 2  # Nombre de clusters
 pi = np.array([0.5, 0.5])  # Proportions des clusters
 N = 1000  # Nombre de points de données
 
-np.random.seed(124)
+np.random.seed(1981)
 
 cavi = CAVI(sigma, nb_clusters, pi, N)
 cavi.gmm_rand()
@@ -185,10 +236,9 @@ elbo = cavi.ELBOS
 del elbo[0:2]
 print(elbo)
 
-
-# # # On vérifie que l'ELBO augmente (bon... pas toujours le cas) : pb observé
-# pour graine 1981
 plt.plot(elbo)
 plt.ylabel('ELBO')
 plt.xlabel('itérations')
 plt.show()
+
+cavi.plot_posteriore_priore()
